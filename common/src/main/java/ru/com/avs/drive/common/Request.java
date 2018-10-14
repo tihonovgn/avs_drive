@@ -4,24 +4,24 @@ import java.io.Serializable;
 import java.util.Map;
 
 public class Request implements Serializable {
-    private Map<String, String> args;
     private String login;
     private String password;
     private COMMANDS command;
+    private MyFile file;
 
-    public Request(Map<String, String> authData, COMMANDS cmd, Map<String, String> args) {
-        login = authData.get("login");
-        password = authData.get("password");
-        command = cmd;
-        this.args = args;
-    }
-
-    public enum COMMANDS {LIST, SAVE, DELETE};
+    public enum COMMANDS {LIST, SAVE, DELETE, GET};
 
     public Request(Map<String, String> authData, COMMANDS cmd) {
         login = authData.get("login");
         password = authData.get("password");
         command = cmd;
+    }
+
+    public Request(Map<String, String> authData, COMMANDS cmd, MyFile file) {
+        login = authData.get("login");
+        password = authData.get("password");
+        command = cmd;
+        this.file = file;
     }
 
     public String getLogin() {
@@ -36,7 +36,7 @@ public class Request implements Serializable {
         return command;
     }
 
-    public Map<String, String> getArgs() {
-        return args;
+    public MyFile getFile() {
+        return file;
     }
 }

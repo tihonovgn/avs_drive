@@ -1,7 +1,5 @@
 package ru.com.avs.drive.client;
 
-import io.netty.handler.codec.serialization.ObjectDecoderInputStream;
-import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -13,12 +11,12 @@ import ru.com.avs.drive.common.Request;
 import ru.com.avs.drive.common.Response;
 
 import java.io.IOException;
-import java.net.Socket;
 import java.net.URL;
 import java.nio.file.*;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainController implements Initializable {
 
@@ -50,6 +48,7 @@ public class MainController implements Initializable {
     TableView lastSelectedTable;
 
     private final String FOLDER = "client_folder";
+    private ClientService clientService;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -70,6 +69,8 @@ public class MainController implements Initializable {
         rightTable.focusedProperty().addListener((observable, oldValue, newValue) -> {
             lastSelectedTable = rightTable;
         });
+
+        clientService = new ClientService();
     }
 
     private void refreshLocalFileList() {
@@ -88,49 +89,18 @@ public class MainController implements Initializable {
     }
 
     public void handleRefreshButtonAction(ActionEvent actionEvent) {
+        refreshLocalFileList();
         refreshServerFileList();
     }
 
     public void refreshServerFileList() {
         Request request = new Request(authData, Request.COMMANDS.LIST);
-        Response answer = sendRequest(request);
+        Response answer = clientService.sendRequest(request);
 
         rightTable.getItems().clear();
         for (MyFile file : answer.getFiles()) {
             rightTable.getItems().add(file);
         }
-    }
-
-    private Response sendRequest(Request request) {
-        ObjectEncoderOutputStream oeos = null;
-        ObjectDecoderInputStream odis = null;
-
-        try (Socket socket = new Socket("localhost", 8189)) {
-            oeos = new ObjectEncoderOutputStream(socket.getOutputStream());
-            oeos.writeObject(request);
-            oeos.flush();
-            odis = new ObjectDecoderInputStream(socket.getInputStream());
-            return (Response) odis.readObject();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (oeos != null) {
-                    oeos.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
-                if (odis != null) {
-                    odis.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return null;
     }
 
     public void setAuthData(Map<String, String> authData) {
@@ -145,27 +115,83 @@ public class MainController implements Initializable {
                 alert.showAndWait();
 
                 if (alert.getResult() == ButtonType.YES) {
-                    deleteFile(file.getName());
+                    deleteFile(file);
 
                 }
             }
         }
     }
 
-    private void deleteFile(String name) {
+    private void deleteFile(MyFile file) {
         if (lastSelectedTable == leftTable) {
-            FileService.deleteLocalFile(FOLDER + "/" + name);
+            FileService.deleteLocalFile(FOLDER + "/" + file.getName());
             refreshLocalFileList();
         } else if (lastSelectedTable == rightTable) {
-            deleteServerFile(name);
+            deleteServerFile(file);
             refreshServerFileList();
         }
     }
 
-    private void deleteServerFile(String name) {
-        Map<String, String> args = new HashMap<>();
-        args.put("filename", name);
-        Request request = new Request(authData, Request.COMMANDS.DELETE, args);
-        Response answer = sendRequest(request);
+    private void deleteServerFile(MyFile file) {
+        Request request = new Request(authData, Request.COMMANDS.DELETE, file);
+        Response answer = clientService.sendRequest(request);
+    }
+
+    public void handleCopyButtonAction(ActionEvent actionEvent) {
+        if (lastSelectedTable != null) {
+            MyFile file = (MyFile) lastSelectedTable.getSelectionModel().getSelectedItem();
+            if (file != null) {
+                TextInputDialog dialog = new TextInputDialog(file.getName());
+                dialog.setTitle("Загрузка файла");
+                dialog.setHeaderText("Загрузка файла");
+                dialog.setContentText("Укажите новое имя файла:");
+
+                Optional<String> result = dialog.showAndWait();
+                if (result.isPresent()) {
+                    file.setOrigName(file.getName());
+                    if(result.get().length() > 0){
+                        file.setName(result.get());
+                    }
+                    copyFile(file);
+                }
+            }
+        }
+    }
+
+    private boolean confirm(String msg){
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, msg, ButtonType.YES, ButtonType.NO);
+        alert.showAndWait();
+
+        if (alert.getResult() == ButtonType.YES) {
+            return true;
+        }
+        return false;
+    }
+
+    private void copyFile(MyFile file) {
+        clientService.setAuthData(authData);
+        String msg = "Файл с таким именем существует. Заменить?";
+        if(lastSelectedTable == leftTable){
+            if(fileNotExists(file, rightTable) || confirm(msg)){
+                clientService.copyFileToServer(file);
+            }
+            refreshServerFileList();
+        }else if(lastSelectedTable == rightTable){
+            if(fileNotExists(file, leftTable) || confirm(msg)){
+                clientService.copyFileToLocal(file);
+            }
+            refreshLocalFileList();
+        }
+    }
+
+    private boolean fileNotExists(MyFile file, TableView table) {
+        AtomicBoolean result = new AtomicBoolean(true);
+        table.getItems().forEach(o -> {
+            MyFile item = (MyFile)o;
+            if (item.getName().equals(file.getName())){
+                result.set(false);
+            }
+        });
+        return result.get();
     }
 }

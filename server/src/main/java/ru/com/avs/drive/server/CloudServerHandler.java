@@ -19,9 +19,6 @@ import java.util.List;
 
 public class CloudServerHandler extends ChannelInboundHandlerAdapter {
 
-    private String username;
-    private String folder = "server_folder/";
-
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         System.out.println("Client connected...");
@@ -32,21 +29,23 @@ public class CloudServerHandler extends ChannelInboundHandlerAdapter {
         try {
             if (cmd == null)
                 return;
-            System.out.println(cmd.getClass());
             Response answer;
             if (cmd instanceof Request) {
                 Request request = (Request) cmd;
                 if (authenticate(request.getLogin(), request.getPassword())) {
-                    username = request.getLogin();
+                    ServerService serverService = new ServerService(request.getLogin());
                     switch (request.getCommand()) {
                         case LIST:
-                            List<MyFile> filesList = getFilesList();
-                            answer = new Response(Response.RESULTS.OK, filesList);
+                            answer = serverService.getFileListResponse();
+                            break;
+                        case GET:
+                            answer = serverService.getFileResponse(request);
                             break;
                         case DELETE:
-                            String fileName = getUserFolder() + "/" + ((Request) cmd).getArgs().get("filename");
-                            FileService.deleteLocalFile(fileName);
-                            answer = new Response(Response.RESULTS.OK);
+                            answer = serverService.getFileDeleteResponse(request.getFile().getName());
+                            break;
+                        case SAVE:
+                            answer = serverService.getFileSaveResponse(request);
                             break;
                         default:
                             answer = new Response(Response.RESULTS.ERROR, "Wrong command!");
@@ -63,31 +62,6 @@ public class CloudServerHandler extends ChannelInboundHandlerAdapter {
         } finally {
             ReferenceCountUtil.release(cmd);
         }
-    }
-
-    private List<MyFile> getFilesList() {
-        List<MyFile> fileList = new ArrayList<>();
-        try {
-            Path dir = Paths.get(getUserFolder());
-            if (!Files.exists(dir)) {
-                Files.createDirectory(dir);
-            }
-            Files.newDirectoryStream(dir)
-                    .forEach(path -> {
-                        try {
-                            fileList.add(new MyFile(path.getFileName(), Files.isDirectory(path), Files.size(path)));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return fileList;
-    }
-
-    private String getUserFolder() {
-        return folder + "/" + username;
     }
 
     private boolean authenticate(String login, String password) {
