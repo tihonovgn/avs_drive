@@ -34,13 +34,37 @@ public class ClientService {
     }
 
     public void copyFileToLocal(MyFile file) {
-        Request request = new Request(authData, Request.COMMANDS.GET, file);
-        Response answer = sendRequest(request);
-        String path = FOLDER + "/" + answer.getFiles().get(0).getName();
-        try {
-            Files.write(Paths.get(path), answer.getFiles().get(0).getData(), StandardOpenOption.CREATE);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (file.isDir()) {
+            Path dir = Paths.get(FOLDER + "/" + file.getPath());
+            System.out.println(dir);
+            System.out.println(Files.exists(dir));
+            if (!Files.exists(dir)) {
+                try {
+                    Files.createDirectory(dir);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            Request request = new Request(authData, Request.COMMANDS.LIST, file);
+            Response answer = sendRequest(request);
+            for (MyFile f : answer.getFiles()) {
+                copyFileToLocal(f);
+            }
+        } else {
+            Request request = new Request(authData, Request.COMMANDS.GET, file);
+            Response answer = sendRequest(request);
+            String path = FOLDER + "/";
+            MyFile currentFile = answer.getFiles().get(0);
+            if (currentFile.getPath() != null) {
+                path += currentFile.getPath();
+            } else {
+                path += currentFile.getName();
+            }
+            try {
+                Files.write(Paths.get(path), answer.getFiles().get(0).getData(), StandardOpenOption.CREATE);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

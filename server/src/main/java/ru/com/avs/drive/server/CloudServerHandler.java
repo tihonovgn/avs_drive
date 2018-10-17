@@ -36,7 +36,8 @@ public class CloudServerHandler extends ChannelInboundHandlerAdapter {
                     ServerService serverService = new ServerService(request.getLogin());
                     switch (request.getCommand()) {
                         case LIST:
-                            answer = serverService.getFileListResponse();
+                            String path = request.getFile() != null ? request.getFile().getPath() : null;
+                            answer = serverService.getFileListResponse(path);
                             break;
                         case GET:
                             answer = serverService.getFileResponse(request);

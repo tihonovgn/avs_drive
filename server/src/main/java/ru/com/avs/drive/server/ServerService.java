@@ -26,22 +26,26 @@ public class ServerService {
         username = login;
     }
 
-    public Response getFileListResponse() {
-        List<MyFile> filesList = getFilesList();
+    public Response getFileListResponse(String filePath) {
+        List<MyFile> filesList = getFilesList(filePath);
         return new Response(Response.RESULTS.OK, filesList);
     }
 
-    private List<MyFile> getFilesList() {
+    private List<MyFile> getFilesList(String filePath) {
         List<MyFile> fileList = new ArrayList<>();
         try {
             Path dir = Paths.get(getUserFolder());
             if (!Files.exists(dir)) {
                 Files.createDirectory(dir);
             }
+            if (filePath != null) {
+                dir = Paths.get(getUserFolder() + "/" + filePath);
+            }
             Files.newDirectoryStream(dir)
                     .forEach(path -> {
                         try {
-                            fileList.add(new MyFile(path.getFileName(), Files.isDirectory(path), Files.size(path)));
+                            MyFile file = new MyFile(path, path.subpath(2, path.getNameCount()));
+                            fileList.add(file);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -75,7 +79,13 @@ public class ServerService {
 
     public Response getFileResponse(Request request) {
         MyFile file = request.getFile();
-        Path path = Paths.get(getUserFolder() + "/" + file.getOrigName());
+        String filepath = getUserFolder() + "/";
+        if (file.getPath() != null) {
+            filepath += file.getPath();
+        } else {
+            filepath += file.getOrigName();
+        }
+        Path path = Paths.get(filepath);
         try {
             byte[] data = Files.readAllBytes(path);
             file.setData(data);

@@ -78,7 +78,7 @@ public class MainController implements Initializable {
             leftTable.getItems().clear();
             Files.newDirectoryStream(Paths.get(FOLDER)).forEach(path -> {
                 try {
-                    leftTable.getItems().add(new MyFile(path.getFileName(), Files.isDirectory(path), Files.size(path)));
+                    leftTable.getItems().add(new MyFile(path, path.subpath(1, path.getNameCount())));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -149,7 +149,7 @@ public class MainController implements Initializable {
                 Optional<String> result = dialog.showAndWait();
                 if (result.isPresent()) {
                     file.setOrigName(file.getName());
-                    if(result.get().length() > 0){
+                    if (result.get().length() > 0) {
                         file.setName(result.get());
                     }
                     copyFile(file);
@@ -158,7 +158,7 @@ public class MainController implements Initializable {
         }
     }
 
-    private boolean confirm(String msg){
+    private boolean confirm(String msg) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, msg, ButtonType.YES, ButtonType.NO);
         alert.showAndWait();
 
@@ -171,13 +171,13 @@ public class MainController implements Initializable {
     private void copyFile(MyFile file) {
         clientService.setAuthData(authData);
         String msg = "Файл с таким именем существует. Заменить?";
-        if(lastSelectedTable == leftTable){
-            if(fileNotExists(file, rightTable) || confirm(msg)){
+        if (lastSelectedTable == leftTable) {
+            if (fileNotExists(file, rightTable) || confirm(msg)) {
                 clientService.copyFileToServer(file);
             }
             refreshServerFileList();
-        }else if(lastSelectedTable == rightTable){
-            if(fileNotExists(file, leftTable) || confirm(msg)){
+        } else if (lastSelectedTable == rightTable) {
+            if (fileNotExists(file, leftTable) || confirm(msg)) {
                 clientService.copyFileToLocal(file);
             }
             refreshLocalFileList();
@@ -187,8 +187,8 @@ public class MainController implements Initializable {
     private boolean fileNotExists(MyFile file, TableView table) {
         AtomicBoolean result = new AtomicBoolean(true);
         table.getItems().forEach(o -> {
-            MyFile item = (MyFile)o;
-            if (item.getName().equals(file.getName())){
+            MyFile item = (MyFile) o;
+            if (item.getName().equals(file.getName())) {
                 result.set(false);
             }
         });

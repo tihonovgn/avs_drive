@@ -1,6 +1,8 @@
 package ru.com.avs.drive.common;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class MyFile implements Serializable {
@@ -10,11 +12,16 @@ public class MyFile implements Serializable {
     private long size;
     private byte[] data;
     private String origName;
+    private boolean isDir;
+    private String path;
 
-    public MyFile(Path fileName, boolean directory, long size) {
-        this.name = fileName.getFileName().toString();
+    public MyFile(Path file, Path path) throws IOException {
+        this.name = file.getFileName().toString();
+        boolean directory = Files.isDirectory(file);
         this.type = directory ? "директория" : "файл";
-        this.size = size;
+        this.size = Files.size(file);
+        this.isDir = directory;
+        this.path = path.toString();
     }
 
     public String getName() {
@@ -47,5 +54,13 @@ public class MyFile implements Serializable {
 
     public void setOrigName(String origName) {
         this.origName = origName;
+    }
+
+    public boolean isDir() {
+        return isDir;
+    }
+
+    public String getPath() {
+        return path;
     }
 }
