@@ -33,11 +33,9 @@ public class ClientService {
         Response answer = sendRequest(request);
     }
 
-    public void copyFileToLocal(MyFile file) {
+    public void copyFileToLocal(MyFile file, boolean rename) {
         if (file.isDir()) {
             Path dir = Paths.get(FOLDER + "/" + file.getPath());
-            System.out.println(dir);
-            System.out.println(Files.exists(dir));
             if (!Files.exists(dir)) {
                 try {
                     Files.createDirectory(dir);
@@ -48,17 +46,18 @@ public class ClientService {
             Request request = new Request(authData, Request.COMMANDS.LIST, file);
             Response answer = sendRequest(request);
             for (MyFile f : answer.getFiles()) {
-                copyFileToLocal(f);
+                copyFileToLocal(f, false);
             }
         } else {
             Request request = new Request(authData, Request.COMMANDS.GET, file);
             Response answer = sendRequest(request);
+
             String path = FOLDER + "/";
             MyFile currentFile = answer.getFiles().get(0);
-            if (currentFile.getPath() != null) {
-                path += currentFile.getPath();
-            } else {
+            if (rename) {
                 path += currentFile.getName();
+            } else {
+                path += currentFile.getPath();
             }
             try {
                 Files.write(Paths.get(path), answer.getFiles().get(0).getData(), StandardOpenOption.CREATE);
@@ -102,5 +101,15 @@ public class ClientService {
             }
         }
         return null;
+    }
+
+    public void move(MyFile file) {
+        Path pathFrom = Paths.get(FOLDER + "/" + file.getOrigName());
+        Path pathTo = Paths.get(FOLDER + "/" + file.getName());
+        try {
+            Files.move(pathFrom, pathTo);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

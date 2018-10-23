@@ -178,7 +178,10 @@ public class MainController implements Initializable {
             refreshServerFileList();
         } else if (lastSelectedTable == rightTable) {
             if (fileNotExists(file, leftTable) || confirm(msg)) {
-                clientService.copyFileToLocal(file);
+                clientService.copyFileToLocal(file, true);
+                if (!file.getOrigName().equals(file.getName())) {
+                    clientService.move(file);
+                }
             }
             refreshLocalFileList();
         }
