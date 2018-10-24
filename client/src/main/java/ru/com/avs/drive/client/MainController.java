@@ -78,18 +78,6 @@ public class MainController implements Initializable {
             lastSelectedTable = rightTable;
         });
 
-
-        leftTable.setRowFactory(tv -> {
-            TableRow<MyFile> row = new TableRow<>();
-            row.setOnDragDropped(event -> {
-                System.out.println("test");
-                Dragboard db = event.getDragboard();
-                if (db.hasFiles()) {
-
-                }
-            });
-            return row ;
-        });
         clientService = new ClientService();
     }
 
@@ -273,20 +261,5 @@ public class MainController implements Initializable {
         alert.setHeaderText("Ошибка");
         alert.setContentText(msg);
         alert.showAndWait();
-    }
-
-    public void handleLeftTableDragDropped(DragEvent dragEvent) {
-        Dragboard db = dragEvent.getDragboard();
-        boolean success = false;
-        if(db.hasFiles()){
-            success = true;
-            String filePath = null;
-            for (File file:db.getFiles()) {
-                filePath = file.getAbsolutePath();
-                System.out.println(filePath);
-            }
-        }
-        dragEvent.setDropCompleted(success);
-        dragEvent.consume();
     }
 }
