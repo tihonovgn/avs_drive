@@ -48,6 +48,9 @@ public class CloudServerHandler extends ChannelInboundHandlerAdapter {
                         case SAVE:
                             answer = serverService.getFileSaveResponse(request);
                             break;
+                        case MOVE:
+                            answer = serverService.getFileMoveResponse(request);
+                            break;
                         default:
                             answer = new Response(Response.RESULTS.ERROR, "Wrong command!");
                     }

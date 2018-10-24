@@ -144,15 +144,19 @@ public class MainController implements Initializable {
                 TextInputDialog dialog = new TextInputDialog(file.getName());
                 dialog.setTitle("Загрузка файла");
                 dialog.setHeaderText("Загрузка файла");
-                dialog.setContentText("Укажите новое имя файла:");
+                dialog.setContentText("Переименовать после копирования:");
 
                 Optional<String> result = dialog.showAndWait();
                 if (result.isPresent()) {
-                    file.setOrigName(file.getName());
+                    MyFile copyFile = new MyFile(file);
+                    copyFile.setOrigName(file.getName());
                     if (result.get().length() > 0) {
-                        file.setName(result.get());
+                        copyFile.setName(result.get());
                     }
-                    copyFile(file);
+                    if (copyFile(copyFile) && !copyFile.getOrigName().equals(copyFile.getName())) {
+                        moveFileAfterCopy(copyFile);
+                    }
+
                 }
             }
         }
@@ -168,33 +172,102 @@ public class MainController implements Initializable {
         return false;
     }
 
-    private void copyFile(MyFile file) {
+    private boolean copyFile(MyFile file) {
         clientService.setAuthData(authData);
         String msg = "Файл с таким именем существует. Заменить?";
+        boolean result = false;
         if (lastSelectedTable == leftTable) {
             if (fileNotExists(file, rightTable) || confirm(msg)) {
                 clientService.copyFileToServer(file);
+                result = true;
             }
             refreshServerFileList();
         } else if (lastSelectedTable == rightTable) {
             if (fileNotExists(file, leftTable) || confirm(msg)) {
-                clientService.copyFileToLocal(file, true);
-                if (!file.getOrigName().equals(file.getName())) {
-                    clientService.move(file);
-                }
+                 clientService.copyFileToLocal(file, true);
+                result = true;
             }
             refreshLocalFileList();
         }
+        return result;
     }
 
     private boolean fileNotExists(MyFile file, TableView table) {
         AtomicBoolean result = new AtomicBoolean(true);
         table.getItems().forEach(o -> {
             MyFile item = (MyFile) o;
-            if (item.getName().equals(file.getName())) {
+            if (item.getName().equals(file.getOrigName())) {
                 result.set(false);
             }
         });
         return result.get();
+    }
+
+    public void handleMoveButtonAction(ActionEvent actionEvent) {
+        if (lastSelectedTable != null) {
+            MyFile file = (MyFile) lastSelectedTable.getSelectionModel().getSelectedItem();
+            if (file != null) {
+                TextInputDialog dialog = new TextInputDialog(file.getName());
+                dialog.setTitle("Переименовать файл");
+                dialog.setHeaderText("Переименовать файл");
+                dialog.setContentText("Укажите новое имя файла:");
+
+                Optional<String> result = dialog.showAndWait();
+                if (result.isPresent()) {
+                    MyFile copyFile = new MyFile(file);
+                    copyFile.setOrigName(file.getName());
+                    if (result.get().length() > 0) {
+                        copyFile.setName(result.get());
+                    }
+                    moveFile(copyFile);
+                }
+            }
+        }
+    }
+
+    private void moveFile(MyFile file) {
+        clientService.setAuthData(authData);
+        if (lastSelectedTable == leftTable) {
+            try {
+                clientService.moveLocal(file);
+            } catch (IOException e) {
+                showAlert("Не удалось переименовать файл");
+            }
+            refreshLocalFileList();
+        } else if (lastSelectedTable == rightTable) {
+            Response response = clientService.moveOnServer(file);
+            if(response.getResult() == Response.RESULTS.OK){
+                refreshServerFileList();
+            }else{
+                showAlert("Не удалось переименовать файл");
+            }
+        }
+    }
+
+    private void moveFileAfterCopy(MyFile file) {
+        clientService.setAuthData(authData);
+        if (lastSelectedTable == rightTable) {
+            try {
+                clientService.moveLocal(file);
+            } catch (IOException e) {
+                showAlert("Не удалось переименовать файл");
+            }
+            refreshLocalFileList();
+        } else if (lastSelectedTable == leftTable) {
+            Response response = clientService.moveOnServer(file);
+            if(response.getResult() == Response.RESULTS.OK){
+                refreshServerFileList();
+            }else{
+                showAlert("Не удалось переименовать файл");
+            }
+        }
+    }
+
+    private void showAlert(String msg) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Ошибка");
+        alert.setHeaderText("Ошибка");
+        alert.setContentText(msg);
+        alert.showAndWait();
     }
 }

@@ -29,4 +29,10 @@ public class FileService {
                 //.peek(System.out::println)
                 .forEach(File::delete);
     }
+
+    public static void move(MyFile file, String baseDir) throws IOException {
+        Path pathFrom = Paths.get(baseDir + "/" + file.getOrigName());
+        Path pathTo = Paths.get(baseDir + "/" + file.getName());
+        Files.move(pathFrom, pathTo);
+    }
 }

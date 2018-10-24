@@ -9,7 +9,7 @@ public class Request implements Serializable {
     private COMMANDS command;
     private MyFile file;
 
-    public enum COMMANDS {LIST, SAVE, DELETE, GET};
+    public enum COMMANDS {LIST, SAVE, DELETE, GET, MOVE};
 
     public Request(Map<String, String> authData, COMMANDS cmd) {
         login = authData.get("login");

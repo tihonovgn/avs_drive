@@ -2,6 +2,7 @@ package ru.com.avs.drive.client;
 
 import io.netty.handler.codec.serialization.ObjectDecoderInputStream;
 import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
+import ru.com.avs.drive.common.FileService;
 import ru.com.avs.drive.common.MyFile;
 import ru.com.avs.drive.common.Request;
 import ru.com.avs.drive.common.Response;
@@ -20,17 +21,36 @@ public class ClientService {
 
     private Map<String, String> authData;
 
-    public void copyFileToServer(MyFile file) {
-        Path path = Paths.get(FOLDER + "/" + file.getOrigName());
-        try {
-            byte[] data = Files.readAllBytes(path);
-            file.setData(data);
-        } catch (IOException e) {
-            e.printStackTrace();
+    public Response copyFileToServer(MyFile file) {
+        Path path = Paths.get(FOLDER + "/" + file.getPath());
+        Response answer;
+        if (file.isDir()) {
+            Request request = new Request(authData, Request.COMMANDS.SAVE, file);
+            answer = sendRequest(request);
+            try {
+                Files.newDirectoryStream(path)
+                    .forEach(p -> {
+                        try {
+                            MyFile f = new MyFile(p, p.subpath(1, p.getNameCount()));
+                            copyFileToServer(f);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            try {
+                byte[] data = Files.readAllBytes(path);
+                file.setData(data);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            Request request = new Request(authData, Request.COMMANDS.SAVE, file);
+            answer = sendRequest(request);
         }
-
-        Request request = new Request(authData, Request.COMMANDS.SAVE, file);
-        Response answer = sendRequest(request);
+        return answer;
     }
 
     public void copyFileToLocal(MyFile file, boolean rename) {
@@ -103,13 +123,14 @@ public class ClientService {
         return null;
     }
 
-    public void move(MyFile file) {
-        Path pathFrom = Paths.get(FOLDER + "/" + file.getOrigName());
-        Path pathTo = Paths.get(FOLDER + "/" + file.getName());
-        try {
-            Files.move(pathFrom, pathTo);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public void moveLocal(MyFile file) throws IOException {
+        FileService.move(file, FOLDER);
+    }
+
+
+
+    public Response moveOnServer(MyFile file) {
+        Request request = new Request(authData, Request.COMMANDS.MOVE, file);
+        return sendRequest(request);
     }
 }

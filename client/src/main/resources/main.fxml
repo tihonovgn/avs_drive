@@ -33,7 +33,7 @@
                  <children>
                   <Button mnemonicParsing="false" onAction="#handleRefreshButtonAction" text="Обновить" />
                      <Button mnemonicParsing="false" onAction="#handleCopyButtonAction" text="Копировать" />
-                     <Button mnemonicParsing="false" text="Переименовать" />
+                     <Button mnemonicParsing="false" onAction="#handleMoveButtonAction" text="Переименовать" />
                      <Button mnemonicParsing="false" onAction="#handleDeleteButtonAction" text="Удалить" />
                  </children>
              </HBox>

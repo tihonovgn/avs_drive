@@ -67,9 +67,16 @@ public class ServerService {
     }
 
     public Response getFileSaveResponse(Request request) {
-        String path = getUserFolder() + "/" + request.getFile().getName();
+        String path = getUserFolder() + "/" + request.getFile().getPath();
         try {
-            Files.write(Paths.get(path), request.getFile().getData(), StandardOpenOption.CREATE);
+            if (request.getFile().isDir()) {
+                Path dir = Paths.get(path);
+                if (!Files.exists(dir)) {
+                    Files.createDirectory(dir);
+                }
+            } else {
+                Files.write(Paths.get(path), request.getFile().getData(), StandardOpenOption.CREATE);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -96,5 +103,15 @@ public class ServerService {
         List<MyFile> fileList = new ArrayList<>();
         fileList.add(file);
         return new Response(Response.RESULTS.OK, fileList);
+    }
+
+    public Response getFileMoveResponse(Request request) {
+        try {
+            FileService.move(request.getFile(), getUserFolder());
+            return new Response(Response.RESULTS.OK);
+        } catch (IOException e) {
+            return new Response(Response.RESULTS.ERROR, "Не удалось переименовать файл");
+        }
+
     }
 }

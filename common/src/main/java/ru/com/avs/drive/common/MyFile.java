@@ -24,6 +24,16 @@ public class MyFile implements Serializable {
         this.path = path.toString();
     }
 
+    public MyFile(MyFile file) {
+        name = file.getName();
+        type = file.getType();
+        size = file.getSize();
+        data = file.getData();
+        origName = file.getOrigName();
+        isDir = file.isDir();
+        path = file.getPath();
+    }
+
     public String getName() {
         return name;
     }
