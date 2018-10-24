@@ -1,15 +1,23 @@
 package ru.com.avs.drive.client;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
 import ru.com.avs.drive.common.FileService;
 import ru.com.avs.drive.common.MyFile;
 import ru.com.avs.drive.common.Request;
 import ru.com.avs.drive.common.Response;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.*;
@@ -70,6 +78,18 @@ public class MainController implements Initializable {
             lastSelectedTable = rightTable;
         });
 
+
+        leftTable.setRowFactory(tv -> {
+            TableRow<MyFile> row = new TableRow<>();
+            row.setOnDragDropped(event -> {
+                System.out.println("test");
+                Dragboard db = event.getDragboard();
+                if (db.hasFiles()) {
+
+                }
+            });
+            return row ;
+        });
         clientService = new ClientService();
     }
 
@@ -116,7 +136,6 @@ public class MainController implements Initializable {
 
                 if (alert.getResult() == ButtonType.YES) {
                     deleteFile(file);
-
                 }
             }
         }
@@ -140,24 +159,9 @@ public class MainController implements Initializable {
     public void handleCopyButtonAction(ActionEvent actionEvent) {
         if (lastSelectedTable != null) {
             MyFile file = (MyFile) lastSelectedTable.getSelectionModel().getSelectedItem();
-            if (file != null) {
-                TextInputDialog dialog = new TextInputDialog(file.getName());
-                dialog.setTitle("Загрузка файла");
-                dialog.setHeaderText("Загрузка файла");
-                dialog.setContentText("Переименовать после копирования:");
-
-                Optional<String> result = dialog.showAndWait();
-                if (result.isPresent()) {
-                    MyFile copyFile = new MyFile(file);
-                    copyFile.setOrigName(file.getName());
-                    if (result.get().length() > 0) {
-                        copyFile.setName(result.get());
-                    }
-                    if (copyFile(copyFile) && !copyFile.getOrigName().equals(copyFile.getName())) {
-                        moveFileAfterCopy(copyFile);
-                    }
-
-                }
+            if (file != null && confirm("Копировать файл " + file.getName() + "?")) {
+                file.setOrigName(file.getName());
+                copyFile(file);
             }
         }
     }
@@ -184,7 +188,7 @@ public class MainController implements Initializable {
             refreshServerFileList();
         } else if (lastSelectedTable == rightTable) {
             if (fileNotExists(file, leftTable) || confirm(msg)) {
-                 clientService.copyFileToLocal(file, true);
+                clientService.copyFileToLocal(file, true);
                 result = true;
             }
             refreshLocalFileList();
@@ -236,9 +240,9 @@ public class MainController implements Initializable {
             refreshLocalFileList();
         } else if (lastSelectedTable == rightTable) {
             Response response = clientService.moveOnServer(file);
-            if(response.getResult() == Response.RESULTS.OK){
+            if (response.getResult() == Response.RESULTS.OK) {
                 refreshServerFileList();
-            }else{
+            } else {
                 showAlert("Не удалось переименовать файл");
             }
         }
@@ -255,9 +259,9 @@ public class MainController implements Initializable {
             refreshLocalFileList();
         } else if (lastSelectedTable == leftTable) {
             Response response = clientService.moveOnServer(file);
-            if(response.getResult() == Response.RESULTS.OK){
+            if (response.getResult() == Response.RESULTS.OK) {
                 refreshServerFileList();
-            }else{
+            } else {
                 showAlert("Не удалось переименовать файл");
             }
         }
@@ -269,5 +273,20 @@ public class MainController implements Initializable {
         alert.setHeaderText("Ошибка");
         alert.setContentText(msg);
         alert.showAndWait();
+    }
+
+    public void handleLeftTableDragDropped(DragEvent dragEvent) {
+        Dragboard db = dragEvent.getDragboard();
+        boolean success = false;
+        if(db.hasFiles()){
+            success = true;
+            String filePath = null;
+            for (File file:db.getFiles()) {
+                filePath = file.getAbsolutePath();
+                System.out.println(filePath);
+            }
+        }
+        dragEvent.setDropCompleted(success);
+        dragEvent.consume();
     }
 }
